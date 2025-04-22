@@ -241,8 +241,7 @@ class AmazonScraper(ScraperBase):
         if price_element:
             price_text = price_element.get_text().strip()
             # Remove currency symbols and convert to float
-            # price_value = ''.join(c for c in price_text if c.isdigit() or c == '.')
-            price_value = price_text.replace(',', '').replace('₹', '').strip()
+            price_value = ''.join(c for c in price_text if c.isdigit() or c == '.')
             try:
                 result["price"] = float(price_value)
             except ValueError:
@@ -342,13 +341,7 @@ class FlipkartScraper(ScraperBase):
             try:
                 result["original_price"] = float(price_value)
                 # Calculate discount percentage
-                
-                if result["price"] and result["price"] > 100000:  # Price too high, likely incorrect
-                    print(f"Warning: Unusual price detected ({result['price']}). Skipping.")
-                    result["price"] = None
-
-                
-                elif result["price"] and result["original_price"]:
+                if result["price"] and result["original_price"]:
                     result["discount"] = round(
                         (result["original_price"] - result["price"]) / result["original_price"] * 100, 2
                     )
@@ -674,7 +667,7 @@ class PricingEnvironment(gym.Env):
         return observation
     
     def _calculate_demand(self, price_factor):
-        """Calculate demand based on price elasticity model."""
+        """Calculate demand d on price elasticity model."""
         # Simple price elasticity model: Q2 = Q1 * (P2/P1)^elasticity
         
         # Base demand at price factor 1.0
@@ -1339,66 +1332,32 @@ class DynamicPricingSystem:
         
     #     return self.env
     
-    ### Changes Made for Better Base Price Selection and Efficiency:
-    # - Ensure the base price is derived from actual scraped price values
-    # - Handled the issue where scraped price data might be `None` or missing
-    # - Improved tensor creation speed with numpy array conversion
-    # - Added fallbacks and prints for empty or bad data scraping
-    #
-    # Replaced this in `prepare_environment`:
-    #   self.env = PricingEnvironment(df_clean)
-    # With logic that checks if `df_clean` has valid price data
-
-    # Replace this method inside `DynamicPricingSystem` class in main.py
-
     def prepare_environment(self):
         """Prepare the RL environment using collected data."""
+        # Load and process data
         df = self.data_processor.load_data()
         if df is None or df.empty:
             raise ValueError("No data available. Run collect_data first.")
-
+        
         df_clean = self.data_processor.clean_data(df)
-
-        # Debug: print number of price values found
-        valid_prices = df_clean['price'].dropna()
-        print(f"Valid prices found: {len(valid_prices)}")
-
-        # Check and handle missing or bad price data
-        if valid_prices.empty:
-            print("No valid price data found. Using fallback base price of $100.0")
-            df_clean['price'] = 100.0  # Set default price
+        
+        # Ensure we have valid price data
+        if df_clean['price'].isna().all():
+            # If all prices are NaN, use a default base price
+            df_clean['price'] = 100.0  # Default price
         else:
-            # Filter out extreme outliers to improve base price accuracy
-            q_low = valid_prices.quantile(0.05)
-            q_high = valid_prices.quantile(0.95)
-            filtered = valid_prices[(valid_prices >= q_low) & (valid_prices <= q_high)]
-            base_price = filtered.mean()
-            df_clean['price'] = df_clean['price'].fillna(base_price)
-
-        # Create environment with updated clean data
+            # Fill NaN prices with median
+            df_clean['price'] = df_clean['price'].fillna(df_clean['price'].median())
+        
+        # Create environment
         self.env = PricingEnvironment(df_clean)
-
-        # Fallback base price if still NaN
+        
         if np.isnan(self.env.base_price):
-            self.env.base_price = 100.0
-            print("Base price was NaN after environment setup. Defaulting to $100.0")
-
+            self.env.base_price = 100.0  # Default base price if NaN
+        
         print(f"Environment prepared with base price: ${self.env.base_price:.2f}")
+        
         return self.env
-
-    # Also fix the tensor creation warning in PPOAgent.update_policy():
-    # Replace this line:
-    # states = torch.FloatTensor(self.buffer['states']).to(self.device)
-    # With:
-    # states = torch.FloatTensor(np.array(self.buffer['states'])).to(self.device)
-
-    # This will avoid the warning:
-    # "Creating a tensor from a list of numpy.ndarrays is extremely slow..."
-
-    # Finally, you may want to log the actual scraped prices for each platform
-    # right after the call to `scrape_product_across_platforms()` in `collect_data()`
-    # to debug future scraping failures.
-
 
     def setup_agents(self):
         """Set up different pricing agents."""
@@ -1621,12 +1580,12 @@ def main():
             print("Error: Please enter both platform and URL")
             continue
     
-    if not product_urls:
-        print("No URLs provided. Using default test URLs...")
-        product_urls = {
-            "amazon": "https://www.amazon.in/dp/B0DGJ7TGDR/?_encoding=UTF8&ref_=cct_cg_Budget_2c1",
-            "flipkart": "https://www.flipkart.com/apple-iphone-16-white-128-gb/p/itm7c0281cd247be"
-        }
+    # if not product_urls:
+    #     print("No URLs provided. Using default test URLs...")
+    #     product_urls = {
+    #         "amazon": "https://www.amazon.in/dp/B0DGJ7TGDR/?_encoding=UTF8&ref_=cct_cg_Budget_2c1",
+    #         "flipkart": "https://www.flipkart.com/apple-iphone-16-white-128-gb/p/itm7c0281cd247be"
+    #     }
     
     print("\nCollecting data for the following URLs:")
     for platform, url in product_urls.items():

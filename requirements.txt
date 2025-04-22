@@ -1,0 +1,15 @@
+streamlit
+pandas
+numpy
+matplotlib
+plotly
+scikit-learn
+selenium
+beautifulsoup4
+requests
+fake-useragent
+webdriver-manager
+gym
+torch
+openai
+typing-extensions

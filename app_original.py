@@ -172,20 +172,20 @@ def main():
         
         with tab1:
             try:
-                st.image("price_comparison.png", caption="Price Comparison Across Strategies")
+                st.image("screenshots\price_comparison.png", caption="Price Comparison Across Strategies")
             except FileNotFoundError:
                 st.info("Price analysis not available yet. Complete the evaluation step first.")
         
         with tab2:
             try:
-                st.image("profit_comparison.png", caption="Profit Comparison")
+                st.image("screenshots\profit_comparison.png", caption="Profit Comparison")
             except FileNotFoundError:
                 st.info("Profit analysis not available yet. Complete the evaluation step first.")
         
         with tab3:
             for agent in ["PPO", "Static", "Rule-Based"]:
                 try:
-                    st.image(f"demand_vs_price_{agent}.png", caption=f"Demand vs Price – {agent}")
+                    st.image(f"screenshots\demand_vs_price_{agent}.png", caption=f"Demand vs Price – {agent}")
                 except FileNotFoundError:
                     st.info(f"{agent} performance visualization not available yet.")
 
